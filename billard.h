@@ -18,7 +18,9 @@
 	                              
 typedef struct {
 	ball_t ball[NB_OF_BALLS]; // ball coordinates
-	// ...
+	bool game_playing;
+	uint8_t counter;
+  	pthread_mutex_t *mutex;
 } game_state_t;
 
 void init_balls_param(game_state_t *game_state);
