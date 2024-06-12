@@ -1,4 +1,4 @@
-GCC=gcc -Wall -std=gnu11 -g
+GCC=gcc -Wall -std=gnu11 -g -fsanitize=address
 LIBS=-L. -lcalc_collision_speeds -lSDL2 -lSDL2_image -lSDL2_mixer -lpthread -lm
 
 BIN=billard
