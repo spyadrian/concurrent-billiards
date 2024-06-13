@@ -1,4 +1,5 @@
 #include "display_and_sound.h"
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
@@ -86,7 +87,7 @@ void *display_func(void *param)
     SDL_RenderClear(renderer);
 
     struct timespec start_main_task = {0};
-    while (1)
+    while (game_state->game_playing)
     {
         clock_gettime(CLOCK_MONOTONIC, &start_main_task);
 
@@ -101,8 +102,8 @@ void *display_func(void *param)
         {
             ball_t *ball = &(game_state->ball[i]);
 
-            if (ball->state == NOT_ACTIVE)
-                continue;
+            // if (ball->state == NOT_ACTIVE)
+            //     continue;
 
             // get pos
             ball_current_pos.x = game_state->ball[i].pos.x;
@@ -113,16 +114,16 @@ void *display_func(void *param)
             {
                 SDL_RenderCopy(renderer, red_ball_texture[0], NULL, &ball_current_pos);
             }
-            else  // EXPLODING
+            else if (ball->state != 4)  // EXPLODING
             {
-                if (ball->timer == EXPL_PHASE_DURATION)
+                if (ball->timer >= EXPL_PHASE_DURATION)
                 {
-                    ball->timer = -1;
+                    ball->timer = 0;
                     ball->state += 1;
                 }
 
                 ball->timer += 1;
-                SDL_RenderCopy(renderer, red_ball_texture[ball->state], NULL, &ball_current_pos);
+                SDL_RenderCopy(renderer, red_ball_texture[ball->state + 1], NULL, &ball_current_pos);
             }
         }
 
