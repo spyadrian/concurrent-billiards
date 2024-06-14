@@ -15,6 +15,8 @@
 
 #define FRAME_RATE 20
 
+Mix_Chunk *sound_chock;  // sound pointer (used in case of chock between 2 moving balls)
+
 SDL_Texture *create_texture_from_image_file(SDL_Renderer *renderer, const char *img_filename, SDL_Rect *img_rect)
 {
     SDL_Surface *img_surface;
@@ -54,7 +56,7 @@ void *display_func(void *param)
     SDL_Rect ball_rect;
     char filename[100];
     SDL_Rect ball_current_pos;
-    Mix_Chunk *sound_chock;   // sound pointer (used in case of chock between 2 moving balls)
+    // Mix_Chunk *sound_chock;   // sound pointer (used in case of chock between 2 moving balls)
     Mix_Chunk *sound_broken;  // sound pointer (used at the beginning of a ball explosion)
 
     // - graphic initialization -
@@ -116,6 +118,11 @@ void *display_func(void *param)
             }
             else if (ball->state != 4)  // EXPLODING
             {
+                if (ball->timer == 0 && ball->state == 0)
+                {
+                    Mix_PlayChannel(-1, sound_broken, 0);
+                }
+
                 if (ball->timer >= EXPL_PHASE_DURATION)
                 {
                     ball->timer = 0;
@@ -126,8 +133,6 @@ void *display_func(void *param)
                 SDL_RenderCopy(renderer, red_ball_texture[ball->state + 1], NULL, &ball_current_pos);
             }
         }
-
-        // Mix_PlayChannel(-1, sound_chock, 0);
 
         SDL_RenderPresent(renderer);
         SDL_RenderClear(renderer);

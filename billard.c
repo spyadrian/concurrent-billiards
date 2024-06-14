@@ -19,6 +19,8 @@
 #include "keyboard.h"
 #include "tools.h"
 
+extern Mix_Chunk *sound_chock;
+
 typedef struct
 {
     game_state_t *game_state;
@@ -87,6 +89,8 @@ void *boule_func(void *args)
                 {
                     calc_collision_speeds(my_ball, &thread_param->game_state->ball[result]);
                 }
+
+                Mix_PlayChannel(-1, sound_chock, 0);
             }
 
             if (my_ball->state <= STOPPED)  // is not destroy
