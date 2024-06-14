@@ -23,6 +23,7 @@ void *keyboard_func(void *param)
 {
     // - thread param -
     game_state_t *game_state = param;
+    ball_t *blue_ball = &(game_state->ball[0]);
 
     SDL_Event event;
     int nb_of_keys;
@@ -49,19 +50,19 @@ void *keyboard_func(void *param)
                 }
                 if (keys[SDL_SCANCODE_RIGHT])
                 {
-                    game_state->ball[0].speed.x += BALL0_ACCEL;
+                    blue_ball->speed.x += BALL0_ACCEL;
                 }
                 if (keys[SDL_SCANCODE_LEFT])
                 {
-                    game_state->ball[0].speed.x -= BALL0_ACCEL;
+                    blue_ball->speed.x -= BALL0_ACCEL;
                 }
                 if (keys[SDL_SCANCODE_UP])
                 {
-                    game_state->ball[0].speed.y -= BALL0_ACCEL;
+                    blue_ball->speed.y -= BALL0_ACCEL;
                 }
                 if (keys[SDL_SCANCODE_DOWN])
                 {
-                    game_state->ball[0].speed.y += BALL0_ACCEL;
+                    blue_ball->speed.y += BALL0_ACCEL;
                 }
                 if (keys[SDL_SCANCODE_S])
                 {

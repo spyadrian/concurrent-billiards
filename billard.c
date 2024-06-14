@@ -27,6 +27,27 @@ typedef struct
     uint8_t id;
 } param_t;
 
+void my_calc_collision_speeds(ball_t *b1, ball_t *b2, pthread_mutex_t *m1, pthread_mutex_t *m2)
+{
+    coord_t dif_pos = (coord_t){b2->pos.x - b1->pos.x, b2->pos.y - b1->pos.y};
+    coord_t dif_speed = (coord_t){b2->speed.x - b1->speed.x, b2->speed.y - b1->speed.y};
+    float distance = sqrt(dif_pos.x * dif_pos.x + dif_pos.y * dif_pos.y);
+
+    coord_t normal = (coord_t){dif_pos.x / distance, dif_pos.y / distance};
+    float dot = dif_speed.x * normal.x + dif_speed.y * normal.y;
+
+    b1->speed.x += dot * normal.x;
+    b1->speed.y += dot * normal.y;
+    pthread_mutex_unlock(m1);
+
+    pthread_mutex_lock(m2);
+    b2->speed.x -= dot * normal.x;
+    b2->speed.y -= dot * normal.y;
+    pthread_mutex_unlock(m2);
+
+    pthread_mutex_lock(m1);
+}
+
 void init_balls_param(game_state_t *game_state)
 {
     srand(time(NULL));
@@ -51,6 +72,7 @@ void *boule_func(void *args)
     param_t *thread_param = (param_t *)args;
     uint8_t idx = thread_param->id;
     ball_t *my_ball = &(thread_param->game_state->ball[idx]);
+    pthread_mutex_t *my_mutex = thread_param->game_state->mutex[idx];
 
     // --- Thread Routine ---
     while (thread_param->game_state->game_playing)
@@ -61,6 +83,8 @@ void *boule_func(void *args)
         if (my_ball->state <= STOPPED)  // is not destroy
         {
             int result = test_collision(idx, thread_param->game_state->ball, NB_OF_BALLS);
+
+            pthread_mutex_lock(my_mutex);
             switch (result)
             {
                 case TOUCH_DOWN:
@@ -83,7 +107,9 @@ void *boule_func(void *args)
                 if (idx == 0 && thread_param->game_state->ball[result].state == STOPPED)
                 {
                     // printf("ball %d destroyed\n", result);
+                    pthread_mutex_lock(thread_param->game_state->mutex[result]);
                     thread_param->game_state->ball[result].state = 0;  // destroy ball
+                    pthread_mutex_unlock(thread_param->game_state->mutex[result]);
                 }
                 else if (result == 0 && thread_param->game_state->ball[idx].state == STOPPED)
                 {
@@ -92,7 +118,7 @@ void *boule_func(void *args)
                 }
                 else
                 {
-                    calc_collision_speeds(my_ball, &thread_param->game_state->ball[result]);
+                    my_calc_collision_speeds(my_ball, &thread_param->game_state->ball[result], my_mutex, thread_param->game_state->mutex[result]);
                 }
 
                 Mix_PlayChannel(-1, sound_chock, 0);
@@ -118,6 +144,8 @@ void *boule_func(void *args)
                     my_ball->state = ACTIVE;
                 }
             }
+
+            pthread_mutex_unlock(my_mutex);
         }
 
         wait_until(current_time, BALL_DELAY);
@@ -133,13 +161,15 @@ int main()
     init_balls_param(&game_state);
     game_state.game_playing = true;
 
-    // mutex for indexes counter
+    // init ball's mutex
     pthread_mutexattr_t mutex_attr;
     pthread_mutexattr_init(&mutex_attr);
     pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_ERRORCHECK_NP);
-
-    game_state.mutex = calloc(1, sizeof(pthread_mutex_t));
-    pthread_mutex_init(game_state.mutex, &mutex_attr);
+    for (uint8_t i = 0; i < NB_OF_BALLS; i++)
+    {
+        game_state.mutex[i] = calloc(1, sizeof(pthread_mutex_t));
+        pthread_mutex_init(game_state.mutex[i], &mutex_attr);
+    }
     pthread_mutexattr_destroy(&mutex_attr);
 
     // - threads -
@@ -162,7 +192,10 @@ int main()
         pthread_join(t[i], NULL);
     }
 
-    free(game_state.mutex);
+    for (uint8_t i = 0; i < NB_OF_BALLS; i++)
+    {
+        free(game_state.mutex[i]);
+    }
 
     return 0;
 }
