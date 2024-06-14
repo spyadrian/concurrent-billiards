@@ -106,15 +106,12 @@ void *boule_func(void *args)
                 my_ball->pos.x += my_ball->speed.x;
                 my_ball->pos.y += my_ball->speed.y;
 
-                if (fabs(my_ball->speed.x) < SPEED_MIN)
-                    my_ball->speed.x = 0;
-
-                if (fabs(my_ball->speed.y) < SPEED_MIN)
-                    my_ball->speed.y = 0;
-
-                if (my_ball->speed.x == 0 && my_ball->speed.y == 0 && idx != 0)
+                // calcule de la vitesse pour l'arret
+                if ((fabs(my_ball->speed.x) + fabs(my_ball->speed.y)) < SPEED_MIN)
                 {
-                    my_ball->state = STOPPED;
+                    my_ball->speed = (coord_t){0, 0};
+                    if (idx != 0)
+                        my_ball->state = STOPPED;
                 }
                 else
                 {
