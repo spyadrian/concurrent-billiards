@@ -30,14 +30,19 @@ typedef struct
 void init_balls_param(game_state_t *game_state)
 {
     srand(time(NULL));
+
     for (uint8_t i = 0; i < NB_OF_BALLS; i++)
     {
-        game_state->ball[i].pos = (coord_t){i * 40.0f + 30.0f, i * 40.0f + 30.0f};
-        game_state->ball[i].radius = 20;
-        game_state->ball[i].speed = (coord_t){(rand() % (int)SPEED_MAX), (rand() % (int)SPEED_MAX)};
+        game_state->ball[i].pos = (coord_t){i * (WINDOW_WIDTH / NB_OF_BALLS), i * (WINDOW_HEIGHT / NB_OF_BALLS)};
+        game_state->ball[i].radius = BALL_RADIUS;
+        game_state->ball[i].speed = (coord_t){(rand() % (int)SPEED_MAX * 2) - SPEED_MAX, (rand() % (int)SPEED_MAX * 2) - SPEED_MAX};
         game_state->ball[i].state = ACTIVE;
         game_state->ball[i].timer = 0;
     }
+
+    // custom blue ball
+    game_state->ball[0].pos = (coord_t){1, 1};
+    game_state->ball[0].speed = (coord_t){0, 0};
 }
 
 void *boule_func(void *args)
