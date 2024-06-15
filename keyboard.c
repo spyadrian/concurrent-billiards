@@ -50,10 +50,18 @@ void *keyboard_func(void *param)
                 if (keys[SDL_SCANCODE_ESCAPE])
                 {
                     game_state->game_playing = false;
-                    pthread_cond_broadcast(game_state->cond);
+                    if (pthread_cond_broadcast(game_state->cond) != 0)
+                    {
+                        perror("pthread_cond_broadcast");
+                        exit(EXIT_FAILURE);
+                    }
                 }
 
-                pthread_mutex_lock(game_state->mutex[0]);
+                if (pthread_mutex_lock(game_state->mutex[0]) != 0)
+                {
+                    perror("pthread_mutex_lock");
+                    exit(EXIT_FAILURE);
+                }
 
                 if (keys[SDL_SCANCODE_RIGHT])
                 {
@@ -78,19 +86,39 @@ void *keyboard_func(void *param)
                 if (fabs(blue_ball->speed.y) > SPEED_MAX)
                     blue_ball->speed.y = SPEED_MAX * SIGN(blue_ball->speed.y);
 
-                pthread_mutex_unlock(game_state->mutex[0]);
+                if (pthread_mutex_unlock(game_state->mutex[0]) != 0)
+                {
+                    perror("pthread_mutex_unlock");
+                    exit(EXIT_FAILURE);
+                }
 
                 if (keys[SDL_SCANCODE_S])
                 {
                     for (uint8_t i = 0; i < NB_OF_BALLS; i++)
-                        pthread_mutex_lock(game_state->mutex[i]);
+                    {
+                        if (pthread_mutex_lock(game_state->mutex[i]) != 0)
+                        {
+                            perror("pthread_mutex_lock");
+                            exit(EXIT_FAILURE);
+                        }
+                    }
 
                     init_balls_param(game_state);
 
                     for (uint8_t i = 0; i < NB_OF_BALLS; i++)
-                        pthread_mutex_unlock(game_state->mutex[i]);
+                    {
+                        if (pthread_mutex_unlock(game_state->mutex[i]) != 0)
+                        {
+                            perror("pthread_mutex_unlock");
+                            exit(EXIT_FAILURE);
+                        }
+                    }
 
-                    pthread_cond_broadcast(game_state->cond);
+                    if (pthread_cond_broadcast(game_state->cond) != 0)
+                    {
+                        perror("pthread_cond_broadcast");
+                        exit(EXIT_FAILURE);
+                    }
                 }
         }  // switch
     } while (game_state->game_playing);

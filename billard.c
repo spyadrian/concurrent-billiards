@@ -29,36 +29,64 @@ typedef struct
 
 void my_calc_collision_speeds(ball_t *b1, ball_t *b2, pthread_mutex_t *m1, pthread_mutex_t *m2)
 {
+    // compute position and speed difference between the two balls
     coord_t dif_pos = (coord_t){b2->pos.x - b1->pos.x, b2->pos.y - b1->pos.y};
     coord_t dif_speed = (coord_t){b2->speed.x - b1->speed.x, b2->speed.y - b1->speed.y};
+
+    // compute the distance between the two balls
     float distance = sqrt(dif_pos.x * dif_pos.x + dif_pos.y * dif_pos.y);
 
+    // compute the unit normal vector of the collision
     coord_t normal = (coord_t){dif_pos.x / distance, dif_pos.y / distance};
+
+    // compute the dot product (projection)
     float dot = dif_speed.x * normal.x + dif_speed.y * normal.y;
 
-    pthread_mutex_lock(m1);
+    if (pthread_mutex_lock(m1) != 0)
+    {
+        perror("pthread_mutex_lock");
+        exit(EXIT_FAILURE);
+    }
+
+    // update speed first ball
     b1->speed.x += dot * normal.x;
     b1->speed.y += dot * normal.y;
 
+    // limit speed
     if (fabs(b1->speed.x) > SPEED_MAX)
         b1->speed.x = SPEED_MAX * SIGN(b1->speed.x);
 
     if (fabs(b1->speed.y) > SPEED_MAX)
         b1->speed.y = SPEED_MAX * SIGN(b1->speed.y);
 
-    pthread_mutex_unlock(m1);
+    if (pthread_mutex_unlock(m1) != 0)
+    {
+        perror("pthread_mutex_unlock");
+        exit(EXIT_FAILURE);
+    }
 
-    pthread_mutex_lock(m2);
+    if (pthread_mutex_lock(m2) != 0)
+    {
+        perror("pthread_mutex_lock");
+        exit(EXIT_FAILURE);
+    }
+
+    // update speed second ball
     b2->speed.x -= dot * normal.x;
     b2->speed.y -= dot * normal.y;
 
+    // limit speed
     if (fabs(b2->speed.x) > SPEED_MAX)
         b2->speed.x = SPEED_MAX * SIGN(b2->speed.x);
 
     if (fabs(b2->speed.y) > SPEED_MAX)
         b2->speed.y = SPEED_MAX * SIGN(b2->speed.y);
 
-    pthread_mutex_unlock(m2);
+    if (pthread_mutex_unlock(m2) != 0)
+    {
+        perror("pthread_mutex_unlock");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void init_balls_param(game_state_t *game_state)
@@ -97,9 +125,21 @@ void *boule_func(void *args)
 
         if (ball->state >= STOPPED)  // if stopped or destroyed, block the ball
         {
-            pthread_mutex_lock(thread_param->game_state->mutex_cond);
-            pthread_cond_wait(thread_param->game_state->cond, thread_param->game_state->mutex_cond);
-            pthread_mutex_unlock(thread_param->game_state->mutex_cond);
+            if (pthread_mutex_lock(thread_param->game_state->mutex_cond) != 0)
+            {
+                perror("pthread_mutex_lock");
+                exit(EXIT_FAILURE);
+            }
+            if (pthread_cond_wait(thread_param->game_state->cond, thread_param->game_state->mutex_cond) != 0)
+            {
+                perror("pthread_cond_wait");
+                exit(EXIT_FAILURE);
+            }
+            if (pthread_mutex_unlock(thread_param->game_state->mutex_cond) != 0)
+            {
+                perror("pthread_mutex_unlock");
+                exit(EXIT_FAILURE);
+            }
         }
 
         if (ball->state == ACTIVE)
@@ -108,7 +148,12 @@ void *boule_func(void *args)
             int result = test_collision(idx, thread_param->game_state->ball, NB_OF_BALLS);
 
             // collision with a wall
-            pthread_mutex_lock(mutex);
+            if (pthread_mutex_lock(mutex) != 0)
+            {
+                perror("pthread_mutex_lock");
+                exit(EXIT_FAILURE);
+            }
+
             switch (result)
             {
                 case TOUCH_DOWN:
@@ -124,7 +169,12 @@ void *boule_func(void *args)
                     ball->speed.x = ball->speed.x * -1;
                     break;
             }
-            pthread_mutex_unlock(mutex);
+
+            if (pthread_mutex_unlock(mutex) != 0)
+            {
+                perror("pthread_mutex_unlock");
+                exit(EXIT_FAILURE);
+            }
 
             // collision with another ball
             if (result >= 0)
@@ -142,7 +192,11 @@ void *boule_func(void *args)
                 Mix_PlayChannel(-1, sound_chock, 0);
             }
 
-            pthread_mutex_lock(mutex);
+            if (pthread_mutex_lock(mutex) != 0)
+            {
+                perror("pthread_mutex_lock");
+                exit(EXIT_FAILURE);
+            }
 
             // - compute movement -
 
@@ -162,7 +216,11 @@ void *boule_func(void *args)
                     ball->state = STOPPED;
             }
 
-            pthread_mutex_unlock(mutex);
+            if (pthread_mutex_unlock(mutex) != 0)
+            {
+                perror("pthread_mutex_unlock");
+                exit(EXIT_FAILURE);
+            }
         }
 
         wait_until(current_time, BALL_DELAY);
@@ -198,27 +256,49 @@ int main()
     {
         params[i].game_state = &game_state;
         params[i].id = i;
-        pthread_create(&t[i], NULL, boule_func, &params[i]);
+        if (pthread_create(&t[i], NULL, boule_func, &params[i]) != 0)
+        {
+            perror("pthread_create");
+            exit(EXIT_FAILURE);
+        }
     }
-    pthread_create(&t[NB_OF_BALLS], NULL, keyboard_func, &game_state);
-    pthread_create(&t[NB_OF_BALLS + 1], NULL, display_func, &game_state);
+
+    if (pthread_create(&t[NB_OF_BALLS], NULL, keyboard_func, &game_state) != 0 ||
+        pthread_create(&t[NB_OF_BALLS + 1], NULL, display_func, &game_state) != 0)
+    {
+        perror("pthread_create");
+        exit(EXIT_FAILURE);
+    }
 
     // --- Threads handling ---
 
     for (uint8_t i = 0; i < NB_OF_BALLS + 2; i++)
     {
-        pthread_join(t[i], NULL);
+        if (pthread_join(t[i], NULL) != 0)
+        {
+            perror("pthread_join");
+            exit(EXIT_FAILURE);
+        }
     }
 
     // --- Destroy ---
 
     for (uint8_t i = 0; i < NB_OF_BALLS; i++)
     {
-        pthread_mutex_destroy(game_state.mutex[i]);
+        if (pthread_mutex_destroy(game_state.mutex[i]) != 0)
+        {
+            perror("pthread_mutex_destroy");
+        }
     }
 
-    pthread_mutex_destroy(game_state.mutex_cond);
-    pthread_cond_destroy(game_state.cond);
+    if (pthread_mutex_destroy(game_state.mutex_cond) != 0)
+    {
+        perror("pthread_mutex_destroy");
+    }
+    if (pthread_cond_destroy(game_state.cond) != 0)
+    {
+        perror("pthread_cond_destroy");
+    }
 
     return 0;
 }
