@@ -8,6 +8,8 @@
 
 #include "tools.h"
 
+#define SIGN(x) ((x > 0) - (x < 0))
+
 #define NB_OF_BALLS 10
 #define SPEED_MAX 3.       // pixels/7 ms
 #define REBOUND_FACTOR 1   // no loss of speed in cas of border rebound

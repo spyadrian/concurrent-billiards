@@ -72,6 +72,12 @@ void *keyboard_func(void *param)
                     blue_ball->speed.y += BALL0_ACCEL;
                 }
 
+                if (fabs(blue_ball->speed.x) > SPEED_MAX)
+                    blue_ball->speed.x = SPEED_MAX * SIGN(blue_ball->speed.x);
+
+                if (fabs(blue_ball->speed.y) > SPEED_MAX)
+                    blue_ball->speed.y = SPEED_MAX * SIGN(blue_ball->speed.y);
+
                 pthread_mutex_unlock(game_state->mutex[0]);
 
                 if (keys[SDL_SCANCODE_S])

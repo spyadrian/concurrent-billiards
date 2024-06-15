@@ -39,11 +39,25 @@ void my_calc_collision_speeds(ball_t *b1, ball_t *b2, pthread_mutex_t *m1, pthre
     pthread_mutex_lock(m1);
     b1->speed.x += dot * normal.x;
     b1->speed.y += dot * normal.y;
+
+    if (fabs(b1->speed.x) > SPEED_MAX)
+        b1->speed.x = SPEED_MAX * SIGN(b1->speed.x);
+
+    if (fabs(b1->speed.y) > SPEED_MAX)
+        b1->speed.y = SPEED_MAX * SIGN(b1->speed.y);
+
     pthread_mutex_unlock(m1);
 
     pthread_mutex_lock(m2);
     b2->speed.x -= dot * normal.x;
     b2->speed.y -= dot * normal.y;
+
+    if (fabs(b2->speed.x) > SPEED_MAX)
+        b2->speed.x = SPEED_MAX * SIGN(b2->speed.x);
+
+    if (fabs(b2->speed.y) > SPEED_MAX)
+        b2->speed.y = SPEED_MAX * SIGN(b2->speed.y);
+
     pthread_mutex_unlock(m2);
 }
 
