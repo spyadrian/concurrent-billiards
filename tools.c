@@ -36,21 +36,21 @@ int test_collision(int ball_id, ball_t *balls, int nb_of_balls)
     int int_pos_y = (int)pos.y;
 
     // Test screen bounds on x axis
-    if (int_pos_x + (balls[ball_id].radius * 2) >= WINDOW_WIDTH)
+    if (int_pos_x + (balls[ball_id].radius * 2) > WINDOW_WIDTH)
     {
         return TOUCH_RIGHT;
     }
-    if (int_pos_x <= 0)
+    if (int_pos_x < 0)
     {
         return TOUCH_LEFT;
     }
 
     // Test screen bounds on y axis
-    if (int_pos_y + (balls[ball_id].radius * 2) >= WINDOW_HEIGHT)
+    if (int_pos_y + (balls[ball_id].radius * 2) > WINDOW_HEIGHT)
     {
         return TOUCH_DOWN;
     }
-    if (int_pos_y <= 0)
+    if (int_pos_y < 0)
     {
         return TOUCH_UP;
     }
