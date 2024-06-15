@@ -104,8 +104,8 @@ void *display_func(void *param)
         {
             ball_t *ball = &(game_state->ball[i]);
 
-            // if (ball->state == NOT_ACTIVE)
-            //     continue;
+            if (ball->state == NOT_ACTIVE)
+                continue;
 
             // get pos
             ball_current_pos.x = game_state->ball[i].pos.x;

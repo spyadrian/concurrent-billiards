@@ -82,7 +82,7 @@ void *boule_func(void *args)
         if (my_ball->state >= STOPPED)
         {
             pthread_mutex_lock(thread_param->game_state->mutex_cond);
-            pthread_cond_wait(&(thread_param->game_state->cond), thread_param->game_state->mutex_cond);
+            pthread_cond_wait(thread_param->game_state->cond, thread_param->game_state->mutex_cond);
             pthread_mutex_unlock(thread_param->game_state->mutex_cond);
         }
 
@@ -156,22 +156,13 @@ int main()
     game_state.game_playing = true;
 
     // - concurrent object -
-    game_state.cond = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
-
-    pthread_mutexattr_t mutex_attr;
-    pthread_mutexattr_init(&mutex_attr);
-    pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_ERRORCHECK_NP);
-
     for (uint8_t i = 0; i < NB_OF_BALLS; i++)
     {
-        game_state.mutex[i] = calloc(1, sizeof(pthread_mutex_t));
-        pthread_mutex_init(game_state.mutex[i], &mutex_attr);
+        game_state.mutex[i] = &(pthread_mutex_t){{__PTHREAD_MUTEX_INITIALIZER(PTHREAD_MUTEX_ERRORCHECK_NP)}};
     }
 
-    game_state.mutex_cond = calloc(1, sizeof(pthread_mutex_t));
-    pthread_mutex_init(game_state.mutex_cond, &mutex_attr);
-
-    pthread_mutexattr_destroy(&mutex_attr);
+    game_state.mutex_cond = &(pthread_mutex_t){{__PTHREAD_MUTEX_INITIALIZER(PTHREAD_MUTEX_ERRORCHECK_NP)}};
+    game_state.cond = &(pthread_cond_t)PTHREAD_COND_INITIALIZER;
 
     // - ball's param -
     init_balls_param(&game_state);
@@ -200,11 +191,11 @@ int main()
 
     for (uint8_t i = 0; i < NB_OF_BALLS; i++)
     {
-        free(game_state.mutex[i]);
+        pthread_mutex_destroy(game_state.mutex[i]);
     }
 
-    free(game_state.mutex_cond);
-    pthread_cond_destroy(&(game_state.cond));
+    pthread_mutex_destroy(game_state.mutex_cond);
+    pthread_cond_destroy(game_state.cond);
 
     return 0;
 }

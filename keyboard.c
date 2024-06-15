@@ -80,7 +80,7 @@ void *keyboard_func(void *param)
                     for (uint8_t i = 0; i < NB_OF_BALLS; i++)
                         pthread_mutex_unlock(game_state->mutex[i]);
 
-                    pthread_cond_broadcast(&(game_state->cond));
+                    pthread_cond_broadcast(game_state->cond);
                 }
         }  // switch
     } while (game_state->game_playing);
