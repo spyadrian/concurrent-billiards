@@ -21,13 +21,16 @@ void wait_key_release()
 
 void *keyboard_func(void *param)
 {
-    // - thread param -
+    // --- Initialise ---
+
     game_state_t *game_state = param;
     ball_t *blue_ball = &(game_state->ball[0]);
 
     SDL_Event event;
     int nb_of_keys;
     uint8_t *keys;
+
+    // --- Key press ---
 
     do
     {

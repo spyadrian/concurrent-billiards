@@ -67,79 +67,88 @@ void init_balls_param(game_state_t *game_state)
 
 void *boule_func(void *args)
 {
-    // --- initialize ---
+    // --- Initialize ---
+
     param_t *thread_param = (param_t *)args;
     uint8_t idx = thread_param->id;
-    ball_t *my_ball = &(thread_param->game_state->ball[idx]);
-    pthread_mutex_t *my_mutex = thread_param->game_state->mutex[idx];
+    ball_t *ball = &(thread_param->game_state->ball[idx]);
+    pthread_mutex_t *mutex = thread_param->game_state->mutex[idx];
 
     // --- Thread Routine ---
+
     while (thread_param->game_state->game_playing)
     {
         struct timespec current_time;
         clock_gettime(CLOCK_MONOTONIC, &current_time);
 
-        if (my_ball->state >= STOPPED)
+        if (ball->state >= STOPPED)  // if stopped or destroyed, block the ball
         {
             pthread_mutex_lock(thread_param->game_state->mutex_cond);
             pthread_cond_wait(thread_param->game_state->cond, thread_param->game_state->mutex_cond);
             pthread_mutex_unlock(thread_param->game_state->mutex_cond);
         }
 
-        if (my_ball->state == ACTIVE)
+        if (ball->state == ACTIVE)
         {
+            // - test collision -
             int result = test_collision(idx, thread_param->game_state->ball, NB_OF_BALLS);
 
-            pthread_mutex_lock(my_mutex);
+            // collision with a wall
+            pthread_mutex_lock(mutex);
             switch (result)
             {
                 case TOUCH_DOWN:
-                    my_ball->speed.y = my_ball->speed.y * -1;
+                    ball->speed.y = ball->speed.y * -1;
                     break;
                 case TOUCH_UP:
-                    my_ball->speed.y = my_ball->speed.y * -1;
+                    ball->speed.y = ball->speed.y * -1;
                     break;
                 case TOUCH_LEFT:
-                    my_ball->speed.x = my_ball->speed.x * -1;
+                    ball->speed.x = ball->speed.x * -1;
                     break;
                 case TOUCH_RIGHT:
-                    my_ball->speed.x = my_ball->speed.x * -1;
+                    ball->speed.x = ball->speed.x * -1;
                     break;
             }
-            pthread_mutex_unlock(my_mutex);
+            pthread_mutex_unlock(mutex);
+
             // collision with another ball
             if (result >= 0)
             {
-                printf("touch ! : %d -> %d\n", idx, result);
+                // printf("touch ! : %d -> %d\n", idx, result);
                 if (thread_param->game_state->ball[result].state == STOPPED)
                 {
-                    thread_param->game_state->ball[result].state = 0;
+                    thread_param->game_state->ball[result].state = 0;  // destroy ball
                 }
                 else
                 {
-                    my_calc_collision_speeds(my_ball, &thread_param->game_state->ball[result], my_mutex, thread_param->game_state->mutex[result]);
+                    my_calc_collision_speeds(ball, &thread_param->game_state->ball[result], mutex, thread_param->game_state->mutex[result]);
                 }
 
                 Mix_PlayChannel(-1, sound_chock, 0);
             }
 
-            pthread_mutex_lock(my_mutex);
+            pthread_mutex_lock(mutex);
 
-            // ralentissement obligatoire du au frottement
-            my_ball->speed.x *= SPEED_FACTOR;
-            my_ball->speed.y *= SPEED_FACTOR;
-            my_ball->pos.x += my_ball->speed.x;
-            my_ball->pos.y += my_ball->speed.y;
+            // - compute movement -
 
-            // calcule de la vitesse pour l'arret
-            if ((fabs(my_ball->speed.x) + fabs(my_ball->speed.y)) < SPEED_MIN)
+            // add friction
+            ball->speed.x *= SPEED_FACTOR;
+            ball->speed.y *= SPEED_FACTOR;
+
+            // move ball
+            ball->pos.x += ball->speed.x;
+            ball->pos.y += ball->speed.y;
+
+            // check for stopped ball
+            if ((fabs(ball->speed.x) + fabs(ball->speed.y)) < SPEED_MIN)
             {
-                my_ball->speed = (coord_t){0, 0};
+                ball->speed = (coord_t){0, 0};
                 if (idx != 0)
-                    my_ball->state = STOPPED;
+                    ball->state = STOPPED;
             }
 
-            pthread_mutex_unlock(my_mutex);
+            pthread_mutex_unlock(mutex);
         }
 
         wait_until(current_time, BALL_DELAY);
