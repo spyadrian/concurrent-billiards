@@ -50,6 +50,7 @@ void *keyboard_func(void *param)
                 if (keys[SDL_SCANCODE_ESCAPE])
                 {
                     game_state->game_playing = false;
+                    pthread_cond_broadcast(game_state->cond);
                 }
 
                 pthread_mutex_lock(game_state->mutex[0]);
