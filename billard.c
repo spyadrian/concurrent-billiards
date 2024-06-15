@@ -81,8 +81,9 @@ void *boule_func(void *args)
 
         if (my_ball->state >= STOPPED)
         {
-            // pthread_mutex_lock(thread_param->game_state->mutex_cond);
-            // pthread_cond_wait(&(thread_param->game_state->cond), thread_param->game_state->mutex_cond);
+            pthread_mutex_lock(thread_param->game_state->mutex_cond);
+            pthread_cond_wait(&(thread_param->game_state->cond), thread_param->game_state->mutex_cond);
+            pthread_mutex_unlock(thread_param->game_state->mutex_cond);
         }
 
         if (my_ball->state == ACTIVE)
@@ -202,8 +203,8 @@ int main()
         free(game_state.mutex[i]);
     }
 
-    // free(game_state.mutex_cond);
-    // pthread_cond_destroy(&(game_state.cond));
+    free(game_state.mutex_cond);
+    pthread_cond_destroy(&(game_state.cond));
 
     return 0;
 }
