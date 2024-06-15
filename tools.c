@@ -59,7 +59,7 @@ int test_collision(int ball_id, ball_t *balls, int nb_of_balls)
     // Test collision with another ball:
     for (int i = 0; i < nb_of_balls; i++)
     {
-        if (i != ball_id && balls[i].state == ACTIVE)
+        if (i != ball_id && balls[i].state <= STOPPED)
         {
             coord_t ball_actuel = balls[i].pos;
             ball_actuel.x = balls[i].pos.x + balls[i].speed.x;

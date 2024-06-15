@@ -48,6 +48,9 @@ void *keyboard_func(void *param)
                 {
                     game_state->game_playing = false;
                 }
+
+                pthread_mutex_lock(game_state->mutex[0]);
+
                 if (keys[SDL_SCANCODE_RIGHT])
                 {
                     blue_ball->speed.x += BALL0_ACCEL;
@@ -64,9 +67,20 @@ void *keyboard_func(void *param)
                 {
                     blue_ball->speed.y += BALL0_ACCEL;
                 }
+
+                pthread_mutex_unlock(game_state->mutex[0]);
+
                 if (keys[SDL_SCANCODE_S])
                 {
+                    for (uint8_t i = 0; i < NB_OF_BALLS; i++)
+                        pthread_mutex_lock(game_state->mutex[i]);
+
                     init_balls_param(game_state);
+
+                    for (uint8_t i = 0; i < NB_OF_BALLS; i++)
+                        pthread_mutex_unlock(game_state->mutex[i]);
+
+                    // pthread_cond_broadcast(&(game_state->cond));
                 }
         }  // switch
     } while (game_state->game_playing);

@@ -36,6 +36,7 @@ void my_calc_collision_speeds(ball_t *b1, ball_t *b2, pthread_mutex_t *m1, pthre
     coord_t normal = (coord_t){dif_pos.x / distance, dif_pos.y / distance};
     float dot = dif_speed.x * normal.x + dif_speed.y * normal.y;
 
+    pthread_mutex_lock(m1);
     b1->speed.x += dot * normal.x;
     b1->speed.y += dot * normal.y;
     pthread_mutex_unlock(m1);
@@ -44,8 +45,6 @@ void my_calc_collision_speeds(ball_t *b1, ball_t *b2, pthread_mutex_t *m1, pthre
     b2->speed.x -= dot * normal.x;
     b2->speed.y -= dot * normal.y;
     pthread_mutex_unlock(m2);
-
-    pthread_mutex_lock(m1);
 }
 
 void init_balls_param(game_state_t *game_state)
@@ -80,7 +79,13 @@ void *boule_func(void *args)
         struct timespec current_time;
         clock_gettime(CLOCK_MONOTONIC, &current_time);
 
-        if (my_ball->state <= STOPPED)  // is not destroy
+        if (my_ball->state >= STOPPED)
+        {
+            // pthread_mutex_lock(thread_param->game_state->mutex_cond);
+            // pthread_cond_wait(&(thread_param->game_state->cond), thread_param->game_state->mutex_cond);
+        }
+
+        if (my_ball->state == ACTIVE)
         {
             int result = test_collision(idx, thread_param->game_state->ball, NB_OF_BALLS);
 
@@ -100,21 +105,14 @@ void *boule_func(void *args)
                     my_ball->speed.x = my_ball->speed.x * -1;
                     break;
             }
+            pthread_mutex_unlock(my_mutex);
             // collision with another ball
             if (result >= 0)
             {
-                // printf("touch ! : %d -> %d\n", idx, result);
-                if (idx == 0 && thread_param->game_state->ball[result].state == STOPPED)
+                printf("touch ! : %d -> %d\n", idx, result);
+                if (thread_param->game_state->ball[result].state == STOPPED)
                 {
-                    // printf("ball %d destroyed\n", result);
-                    pthread_mutex_lock(thread_param->game_state->mutex[result]);
-                    thread_param->game_state->ball[result].state = 0;  // destroy ball
-                    pthread_mutex_unlock(thread_param->game_state->mutex[result]);
-                }
-                else if (result == 0 && thread_param->game_state->ball[idx].state == STOPPED)
-                {
-                    // printf("ball %d destroyed\n", idx);
-                    thread_param->game_state->ball[idx].state = 0;  // destroy ball
+                    thread_param->game_state->ball[result].state = 0;
                 }
                 else
                 {
@@ -124,25 +122,20 @@ void *boule_func(void *args)
                 Mix_PlayChannel(-1, sound_chock, 0);
             }
 
-            if (my_ball->state <= STOPPED)  // is not destroy
-            {
-                // ralentissement obligatoire du au frottement
-                my_ball->speed.x *= SPEED_FACTOR;
-                my_ball->speed.y *= SPEED_FACTOR;
-                my_ball->pos.x += my_ball->speed.x;
-                my_ball->pos.y += my_ball->speed.y;
+            pthread_mutex_lock(my_mutex);
 
-                // calcule de la vitesse pour l'arret
-                if ((fabs(my_ball->speed.x) + fabs(my_ball->speed.y)) < SPEED_MIN)
-                {
-                    my_ball->speed = (coord_t){0, 0};
-                    if (idx != 0)
-                        my_ball->state = STOPPED;
-                }
-                else
-                {
-                    my_ball->state = ACTIVE;
-                }
+            // ralentissement obligatoire du au frottement
+            my_ball->speed.x *= SPEED_FACTOR;
+            my_ball->speed.y *= SPEED_FACTOR;
+            my_ball->pos.x += my_ball->speed.x;
+            my_ball->pos.y += my_ball->speed.y;
+
+            // calcule de la vitesse pour l'arret
+            if ((fabs(my_ball->speed.x) + fabs(my_ball->speed.y)) < SPEED_MIN)
+            {
+                my_ball->speed = (coord_t){0, 0};
+                if (idx != 0)
+                    my_ball->state = STOPPED;
             }
 
             pthread_mutex_unlock(my_mutex);
@@ -156,21 +149,31 @@ void *boule_func(void *args)
 
 int main()
 {
-    game_state_t game_state = {0};
+    // --- Initialize ---
 
-    init_balls_param(&game_state);
+    game_state_t game_state = {0};
     game_state.game_playing = true;
 
-    // init ball's mutex
+    // - concurrent object -
+    game_state.cond = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
+
     pthread_mutexattr_t mutex_attr;
     pthread_mutexattr_init(&mutex_attr);
     pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_ERRORCHECK_NP);
+
     for (uint8_t i = 0; i < NB_OF_BALLS; i++)
     {
         game_state.mutex[i] = calloc(1, sizeof(pthread_mutex_t));
         pthread_mutex_init(game_state.mutex[i], &mutex_attr);
     }
+
+    game_state.mutex_cond = calloc(1, sizeof(pthread_mutex_t));
+    pthread_mutex_init(game_state.mutex_cond, &mutex_attr);
+
     pthread_mutexattr_destroy(&mutex_attr);
+
+    // - ball's param -
+    init_balls_param(&game_state);
 
     // - threads -
     pthread_t t[NB_OF_BALLS + 2] = {0};
@@ -185,17 +188,22 @@ int main()
     pthread_create(&t[NB_OF_BALLS], NULL, keyboard_func, &game_state);
     pthread_create(&t[NB_OF_BALLS + 1], NULL, display_func, &game_state);
 
-    // --- Threads Handling ---
+    // --- Threads handling ---
 
     for (uint8_t i = 0; i < NB_OF_BALLS + 2; i++)
     {
         pthread_join(t[i], NULL);
     }
 
+    // --- Destroy ---
+
     for (uint8_t i = 0; i < NB_OF_BALLS; i++)
     {
         free(game_state.mutex[i]);
     }
+
+    // free(game_state.mutex_cond);
+    // pthread_cond_destroy(&(game_state.cond));
 
     return 0;
 }
