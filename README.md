@@ -57,7 +57,7 @@ make run
 
 ## Credits
 
-The starter template and the precompiled `libcalc_collision_speeds.a` were provided by the course; the collision response used in the simulation is our own implementation (`my_calc_collision_speeds` in `billard.c`).
+The starter template, the image and sound assets (`images/`, `sounds/`) and the precompiled `libcalc_collision_speeds.a` were provided by the course; the collision response used in the simulation is our own implementation (`my_calc_collision_speeds` in `billard.c`).
 
 ## License
 
